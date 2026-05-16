@@ -1,0 +1,53 @@
+name: Auth Doctor
+description: Scan a repository for high-signal authentication and authorization flaws.
+inputs:
+  diff:
+    description: Base branch or ref for diff scanning.
+    required: false
+    default: main
+  fail-on:
+    description: Severity threshold that fails the workflow.
+    required: false
+    default: critical
+  sarif:
+    description: Emit SARIF output.
+    required: false
+    default: "true"
+  github-token:
+    description: GitHub token for PR comments.
+    required: false
+  comment:
+    description: Post or update an Auth Doctor pull request comment.
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Run Auth Doctor JSON report
+      shell: bash
+      run: |
+        npx -y auth-doctor@latest . --diff "${{ inputs.diff }}" --json --fail-on none --output auth-doctor.report.json
+
+    - name: Emit GitHub annotations
+      shell: bash
+      run: |
+        npx -y auth-doctor@latest . --diff "${{ inputs.diff }}" --annotations --fail-on none
+
+    - name: Emit SARIF
+      if: ${{ inputs.sarif == 'true' }}
+      shell: bash
+      run: |
+        npx -y auth-doctor@latest . --diff "${{ inputs.diff }}" --sarif --fail-on none --output auth-doctor.sarif
+
+    - name: Post or update PR comment
+      if: ${{ inputs.comment == 'true' && inputs.github-token != '' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        node "$GITHUB_ACTION_PATH/post-comment.mjs" auth-doctor.report.json
+
+    - name: Enforce fail threshold
+      shell: bash
+      run: |
+        npx -y auth-doctor@latest . --diff "${{ inputs.diff }}" --score --fail-on "${{ inputs.fail-on }}" >/dev/null

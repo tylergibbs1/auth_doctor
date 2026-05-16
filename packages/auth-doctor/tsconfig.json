@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "references": [
+    { "path": "../types" },
+    { "path": "../core" },
+    { "path": "../analyzers-js" },
+    { "path": "../agent-install" },
+    { "path": "../integration-github-action" },
+    { "path": "../sarif" }
+  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

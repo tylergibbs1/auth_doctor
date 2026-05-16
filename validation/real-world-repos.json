@@ -1,0 +1,40 @@
+{
+  "repositories": [
+    {
+      "name": "nextauthjs/next-auth-example",
+      "url": "https://github.com/nextauthjs/next-auth-example.git",
+      "profile": ["nextjs", "authjs"]
+    },
+    {
+      "name": "vercel/nextjs-subscription-payments",
+      "url": "https://github.com/vercel/nextjs-subscription-payments.git",
+      "profile": ["nextjs", "supabase"]
+    },
+    {
+      "name": "supabase/supabase/examples/auth/nextjs",
+      "url": "https://github.com/supabase/supabase.git",
+      "scanPath": "examples/auth/nextjs",
+      "profile": ["nextjs", "supabase"]
+    },
+    {
+      "name": "clerk/nextjs-auth-starter-template",
+      "url": "https://github.com/clerk/nextjs-auth-starter-template.git",
+      "profile": ["nextjs", "clerk"]
+    },
+    {
+      "name": "clerk/clerk-nextjs-starter",
+      "url": "https://github.com/clerk/clerk-nextjs-starter.git",
+      "profile": ["nextjs", "clerk"]
+    },
+    {
+      "name": "gothinkster/node-express-realworld-example-app",
+      "url": "https://github.com/gothinkster/node-express-realworld-example-app.git",
+      "profile": ["express", "jwt"]
+    },
+    {
+      "name": "sahat/hackathon-starter",
+      "url": "https://github.com/sahat/hackathon-starter.git",
+      "profile": ["express"]
+    }
+  ]
+}

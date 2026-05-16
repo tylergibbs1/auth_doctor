@@ -1,0 +1,16 @@
+{
+  "name": "@auth-doctor/analyzers-js",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dependencies": {
+    "@auth-doctor/rules": "0.1.0",
+    "@auth-doctor/types": "0.1.0",
+    "typescript": "^5.8.3"
+  }
+}
+

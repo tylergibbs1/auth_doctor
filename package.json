@@ -1,0 +1,24 @@
+{
+  "name": "auth-doctor-repo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Framework-aware auth correctness scanner for TypeScript and JavaScript apps.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "find packages \\( -path '*/dist' -o -name '*.tsbuildinfo' -o -path '*/src/*.js' -o -path '*/src/*.d.ts' -o -path '*/src/*.js.map' \\) -exec rm -rf {} +",
+    "test": "vitest run",
+    "check": "npm run build && npm test",
+    "auth-doctor": "tsx packages/auth-doctor/src/cli.ts",
+    "validate:real-world": "node scripts/real-world-validate.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  }
+}

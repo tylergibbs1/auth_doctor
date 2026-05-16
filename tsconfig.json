@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/types" },
+    { "path": "packages/core" },
+    { "path": "packages/rules" },
+    { "path": "packages/analyzers-js" },
+    { "path": "packages/agent-install" },
+    { "path": "packages/sarif" },
+    { "path": "packages/auth-doctor" },
+    { "path": "packages/integration-github-action" }
+  ]
+}
+
