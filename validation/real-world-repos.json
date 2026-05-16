@@ -35,6 +35,86 @@
       "name": "sahat/hackathon-starter",
       "url": "https://github.com/sahat/hackathon-starter.git",
       "profile": ["express"]
+    },
+    {
+      "name": "hiteshchoudhary/nextjs-fullstack-auth",
+      "url": "https://github.com/hiteshchoudhary/nextjs-fullstack-auth.git",
+      "profile": ["nextjs", "custom-auth"]
+    },
+    {
+      "name": "vercel/nextjs-postgres-auth-starter",
+      "url": "https://github.com/vercel/nextjs-postgres-auth-starter.git",
+      "profile": ["nextjs"]
+    },
+    {
+      "name": "auth0-samples/auth0-nextjs-samples",
+      "url": "https://github.com/auth0-samples/auth0-nextjs-samples.git",
+      "profile": ["nextjs", "auth0"]
+    },
+    {
+      "name": "rwieruch/nextjs-firebase-authentication",
+      "url": "https://github.com/rwieruch/nextjs-firebase-authentication.git",
+      "profile": ["nextjs", "firebase"]
+    },
+    {
+      "name": "WebDevSimplified/custom-nextjs-authentication",
+      "url": "https://github.com/WebDevSimplified/custom-nextjs-authentication.git",
+      "profile": ["nextjs", "custom-auth"]
+    },
+    {
+      "name": "weehongkoh/nextjs-app-router-authjs",
+      "url": "https://github.com/weehongkoh/nextjs-app-router-authjs.git",
+      "profile": ["nextjs", "authjs"]
+    },
+    {
+      "name": "mickasmt/next-auth-roles-template",
+      "url": "https://github.com/mickasmt/next-auth-roles-template.git",
+      "profile": ["nextjs", "authjs"]
+    },
+    {
+      "name": "mryechkin/nextjs-supabase-auth",
+      "url": "https://github.com/mryechkin/nextjs-supabase-auth.git",
+      "profile": ["nextjs", "supabase"]
+    },
+    {
+      "name": "dabit3/supabase-nextjs-auth",
+      "url": "https://github.com/dabit3/supabase-nextjs-auth.git",
+      "profile": ["nextjs", "supabase"]
+    },
+    {
+      "name": "wpcodevo/nextjs14-supabase-ssr-authentication",
+      "url": "https://github.com/wpcodevo/nextjs14-supabase-ssr-authentication.git",
+      "profile": ["nextjs", "supabase"]
+    },
+    {
+      "name": "gladly-team/next-firebase-auth",
+      "url": "https://github.com/gladly-team/next-firebase-auth.git",
+      "profile": ["nextjs", "firebase"]
+    },
+    {
+      "name": "sairajchouhan/nextjs-firebase-auth",
+      "url": "https://github.com/sairajchouhan/nextjs-firebase-auth.git",
+      "profile": ["nextjs", "firebase"]
+    },
+    {
+      "name": "iamshaunjp/node-express-jwt-auth",
+      "url": "https://github.com/iamshaunjp/node-express-jwt-auth.git",
+      "profile": ["express", "jwt"]
+    },
+    {
+      "name": "zachgoll/express-jwt-authentication-starter",
+      "url": "https://github.com/zachgoll/express-jwt-authentication-starter.git",
+      "profile": ["express", "jwt"]
+    },
+    {
+      "name": "didinj/node-express-mongoose-passport-jwt-rest-api-auth",
+      "url": "https://github.com/didinj/node-express-mongoose-passport-jwt-rest-api-auth.git",
+      "profile": ["express", "jwt"]
+    },
+    {
+      "name": "Louis3797/express-ts-auth-service",
+      "url": "https://github.com/Louis3797/express-ts-auth-service.git",
+      "profile": ["express", "jwt"]
     }
   ]
 }

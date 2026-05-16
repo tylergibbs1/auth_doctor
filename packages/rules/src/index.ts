@@ -7,7 +7,7 @@ type RuleMeta = Pick<Rule, "id" | "title" | "category" | "defaultSeverity"> & {
 };
 
 const dangerousPath = /(admin|dashboard|settings|account|billing|teams?|orgs?|organizations?|projects?|users?|api\/private|invitations?|files?|documents?|apikeys?)/i;
-const databaseAccess = /\b(db|prisma|firebase|firestore|collection|model)\b[\s\S]{0,240}\.(find|findMany|findUnique|query|select|insert|update|delete|remove|create|upsert|get|set|doc)\b|\.from\(["'`][\w-]+["'`]\)|\.collection\(["'`][\w-]+["'`]\)/is;
+const databaseAccess = /\b(db|prisma|firebase|firestore|collection)\b[\s\S]{0,240}\.(find|findMany|findUnique|query|select|insert|update|delete|remove|create|upsert|get|set|doc)\b|\b(User|Project|Article|Profile|Account|Session|Token|Organization|Team|Workspace|Invoice|File|Document|Comment|Post)(?:Model)?\.(find|findOne|findById|update|delete|create)\b|\.from\(["'`][\w-]+["'`]\)|\.collection\(["'`][\w-]+["'`]\)/is;
 const serverAuthCheck = /\b(auth|currentUser|getServerSession|getSession|getToken|getUser|getUserOrThrow|verifyIdToken|jwtVerify|verify)\s*\(|requireAuth|withAuth|clerkMiddleware|authMiddleware|isAuthenticated|session\?\.user|userId\b/;
 const authorizationCheck = /\b(ownerId|userId|tenantId|orgId|organizationId|workspaceId|memberId|role|permission|permissions|isAdmin|hasAccess|canAccess|authorize|policy|members)\b/is;
 const clientRoleSource = /\b(req|request)\.(body|query|headers|cookies)|searchParams|get\(["'`](role|isAdmin|userId|orgId|tenantId|organizationId)["'`]\)|localStorage|sessionStorage/i;
@@ -53,8 +53,8 @@ export const rules: Rule[] = [
     },
     (file) => {
       if (!/\bjwt\.verify\s*\(/.test(file.text)) return [];
-      if (/\b(exp|maxTokenAge|clockTolerance)\b/.test(file.text)) return [];
-      return [diagnostic(file, lineOf(file, /\bjwt\.verify\s*\(/), "auth/jwt-missing-exp", "JWT verification call lacks an explicit expiration policy.")];
+      if (!/\bignoreExpiration\s*:\s*true\b/.test(file.text)) return [];
+      return [diagnostic(file, lineOf(file, /\bjwt\.verify\s*\(/), "auth/jwt-missing-exp", "JWT verification disables expiration checks.")];
     }
   ),
   textRule(
@@ -173,7 +173,7 @@ export const rules: Rule[] = [
       if (!/(idToken|Authorization|Bearer|firebase)/i.test(file.text)) return [];
       if (/\bverifyIdToken\s*\(/.test(file.text)) return [];
       return matchingLines(file, /\b(jwt\.decode|jwtDecode|decodeJwt|JSON\.parse|atob)\s*\(/)
-        .filter(({ text }) => /(token|idToken|Authorization|Bearer|firebase)/i.test(text))
+        .filter(({ text }) => /(token|idToken|Authorization|Bearer)/i.test(text))
         .map(({ line, text }) =>
         diagnostic(file, line, "auth/firebase-id-token-not-verified", text)
       );
@@ -206,6 +206,7 @@ export const rules: Rule[] = [
     },
     (file, context) => {
       if (!isHandlerLike(file)) return [];
+      if (isAuthFlowPath(file)) return [];
       if (!isProtectedRouteCandidate(file, context) || !databaseAccess.test(file.text)) return [];
       if (serverAuthCheck.test(file.text)) return [];
       return [diagnostic(file, firstExecutableLine(file), "auth/no-server-auth-check", "Protected-looking route accesses data without a server auth primitive.")];
@@ -237,6 +238,7 @@ export const rules: Rule[] = [
     },
     (file) => {
       if (!serverAuthCheck.test(file.text) || !databaseAccess.test(file.text)) return [];
+      if (/auth\.(optional|required)|req\.auth|request\.auth/.test(file.text)) return [];
       if (!/(params\.id|req\.params\.id|request\.nextUrl\.searchParams|get\(["'`]id["'`]\)|findUnique\s*\(\s*\{[^}]*where\s*:\s*\{[^}]*id)/is.test(file.text)) return [];
       if (hasAuthorizationBeyondPresence(file.text)) return [];
       return [diagnostic(file, lineOf(file, /params\.id|req\.params\.id|findUnique/), "auth/authenticated-not-authorized", "Handler verifies a session and loads a requested resource without an ownership or tenant constraint.")];
@@ -251,8 +253,9 @@ export const rules: Rule[] = [
       whyItMatters: "Queries in tenant-aware routes can leak data across organizations if tenant constraints are absent.",
       recommendation: "Add a verified tenant, organization, or workspace constraint to the database query."
     },
-    (file) => {
-      if (!/(tenant|org|organization|workspace)/i.test(file.relativePath + file.text)) return [];
+    (file, context) => {
+      const tenantSignals = [...(context.config.tenantKeys ?? []), "tenant", "org", "organization", "workspace"];
+      if (!tenantSignals.some((signal) => new RegExp(`(^|/)${signal}`, "i").test(file.relativePath))) return [];
       if (!databaseAccess.test(file.text)) return [];
       if (/\b(tenantId|orgId|organizationId|workspaceId)\b\s*[:=]/.test(file.text)) return [];
       return [diagnostic(file, lineOf(file, databaseAccess), "auth/missing-tenant-scope", "Tenant-like route performs a database operation without a tenant/org constraint.")];
@@ -269,6 +272,8 @@ export const rules: Rule[] = [
     },
     (file) => {
       if (!/(params\.id|req\.params|searchParams|get\(["'`]id["'`]\))/.test(file.text) || !databaseAccess.test(file.text)) return [];
+      if (/req\.params(?!\.id)|params\.(slug|username|provider)/.test(file.text) && !/req\.params\.id|params\.id/.test(file.text)) return [];
+      if (/auth\.(optional|required)|req\.auth|request\.auth/.test(file.text)) return [];
       if (hasAuthorizationBeyondPresence(file.text)) return [];
       return [diagnostic(file, lineOf(file, /params\.id|req\.params|searchParams/), "auth/insecure-direct-object-reference", "Request-controlled resource ID flows into data access without an access constraint.")];
     }
@@ -284,7 +289,7 @@ export const rules: Rule[] = [
     },
     (file) => {
       if (!isPageOrRouteComponent(file)) return [];
-      if (!/\b(useSession|useAuth)\s*\(|\b(role|isAdmin)\b\s*={2,3}\s*["'`]admin|router\.push\(["'`]\/login|redirect\(["'`]\/login/.test(file.text)) return [];
+      if (!/\b(useSession|useAuth)\s*\(|\b(role|isAdmin)\b\s*={2,3}\s*["'`]admin/.test(file.text)) return [];
       if (!dangerousPath.test(file.relativePath)) return [];
       return [diagnostic(file, lineOf(file, /\buseSession\s*\(|\buseAuth\s*\(|["']use client["']/), "auth/client-only-protection", "Protected-looking page uses client-side auth state as its visible guard.")];
     }
@@ -300,6 +305,7 @@ export const rules: Rule[] = [
     },
     (file) => {
       if (!isClientReachable(file) || !/\b(isAdmin|role\s*={2,3}\s*["'`]admin|role\s*===\s*["'`]admin)/.test(file.text)) return [];
+      if (!/\b(fetch|axios|mutate|delete|remove|update|create|POST|DELETE|serverAction)\b/i.test(file.text)) return [];
       return [diagnostic(file, lineOf(file, /isAdmin|role\s*={2,3}\s*["'`]admin/), "auth/admin-claim-not-verified-server-side", "Admin claim appears in client-reachable UI code.")];
     }
   ),
@@ -313,8 +319,9 @@ export const rules: Rule[] = [
       recommendation: "Set auth cookies with `httpOnly: true`, `secure: true` in production, and an appropriate `sameSite` value."
     },
     (file) => {
-      const cookieLines = matchingLines(file, /(cookies\(\)\.set|res\.cookie|Set-Cookie|serialize\()/i);
+      const cookieLines = matchingLines(file, /(cookies\(\)\.set|res\.cookie|Set-Cookie)/i);
       if (!cookieLines.length) return [];
+      if (/res\.cookie\([\s\S]{0,220}(CookieConfig|cookieOptions)/.test(file.text)) return [];
       if (/httpOnly\s*:\s*true/i.test(file.text) && /secure\s*:\s*true|secure;\s*/i.test(file.text) && /sameSite|SameSite/i.test(file.text)) return [];
       return cookieLines.slice(0, 1).map(({ line, text }) => diagnostic(file, line, "auth/insecure-cookie-flags", text));
     }
@@ -329,7 +336,7 @@ export const rules: Rule[] = [
       recommendation: "Validate a CSRF token, same-origin header, webhook signature, or other request authenticity proof before mutating state."
     },
     (file) => {
-      if (!/\b(POST|PUT|PATCH|DELETE)\b/.test(file.text) || !/(cookies\(\)|req\.cookies|cookie)/i.test(file.text)) return [];
+      if (!/\b(POST|PUT|PATCH|DELETE)\b/.test(file.text) || !/(cookies\(\)\.get|req\.cookies|request\.cookies\.get)/i.test(file.text)) return [];
       if (/\b(csrf|same-origin|origin|referer|webhook|signature)\b/i.test(file.text)) return [];
       return [diagnostic(file, lineOf(file, /\b(POST|PUT|PATCH|DELETE)\b/), "auth/missing-csrf-state-changing-route", "Unsafe method appears to use cookie auth without CSRF or origin validation.")];
     }
@@ -343,9 +350,10 @@ export const rules: Rule[] = [
       whyItMatters: "Missing OAuth state validation can allow login CSRF or callback confusion attacks.",
       recommendation: "Generate a random state value before redirect and validate it during the callback."
     },
-    (file) => {
+    (file, context) => {
       if (!/(authorize\?|\/oauth\/authorize|response_type=["'`]code)/i.test(file.relativePath + "\n" + file.text)) return [];
       if (/NextAuth|from ["'`]next-auth|supabase\.auth|exchangeCodeForSession|signInWithOtp|resetPasswordForEmail/i.test(file.text)) return [];
+      if (nearbyFilesContain(file, context, /\b(state|validateState|STATE_COOKIE|code_challenge|code_verifier)\b/i)) return [];
       if (/\bstate\b/.test(file.text)) return [];
       return [diagnostic(file, firstExecutableLine(file), "auth/oauth-missing-state", "OAuth-like handler does not mention state generation or validation.")];
     }
@@ -361,6 +369,8 @@ export const rules: Rule[] = [
     },
     (file) =>
       matchingLines(file, /(redirect|NextResponse\.redirect|res\.redirect)\s*\([^)]*(next|callbackUrl|redirectUrl|req\.query|searchParams)/i)
+        .filter(({ text }) => !/new URL\(\s*["'`]\/[^"'`]*["'`]\s*,/.test(text))
+        .filter(({ text }) => !/\$\{\s*origin\s*\}\$\{\s*next\s*\}/.test(text))
         .filter(({ text }) => !/isSafeRedirect|allowlisted|sanitize|safeRedirect/i.test(text))
         .filter(({ text }) => !/req\.session\.returnTo/.test(text) || !/isSafeRedirect/.test(file.text))
         .map(
@@ -378,6 +388,7 @@ export const rules: Rule[] = [
     },
     (file) => {
       if (!/(NextAuth|callbacks|session\s*\(|jwt\s*\()/.test(file.text)) return [];
+      if (/async\s+jwt\s*\([\s\S]{0,500}(dbUser|database|prisma|getUserById)[\s\S]{0,500}token\.role\s*=/.test(file.text)) return [];
       return matchingLines(file, /session\.user\.(role|isAdmin|orgId|tenantId)\s*=\s*(token|user|profile)\./).map(({ line, text }) =>
         diagnostic(file, line, "auth/authjs-unsafe-callback-role", text)
       );
@@ -392,7 +403,8 @@ export const rules: Rule[] = [
       whyItMatters: "Clerk client hooks are useful for UI state, but protected data still needs server-side `auth()` checks or middleware coverage.",
       recommendation: "Use Clerk `auth()` or middleware in server routes and verify organization or role membership server-side."
     },
-    (file) => {
+    (file, context) => {
+      if (!context.profile.authProviders.includes("clerk") && !/@clerk\//.test(file.text)) return [];
       if (!isPageOrRouteComponent(file) || !isClientReachable(file) || !/\b(useAuth|useUser|SignedIn|SignedOut)\b/.test(file.text)) return [];
       if (!dangerousPath.test(file.relativePath)) return [];
       return [diagnostic(file, lineOf(file, /\b(useAuth|useUser|SignedIn|SignedOut)\b/), "auth/clerk-client-only-auth", "Clerk client UI primitive guards a protected-looking page.")];
@@ -427,6 +439,7 @@ export const rules: Rule[] = [
     (file, context) => {
       if (!context.profile.protectedRouteCandidates.length) return [];
       if (!/middleware\.[cm]?[jt]s$/.test(file.relativePath)) return [];
+      if (/\(\?!/.test(file.text)) return [];
       const missing = context.profile.protectedRouteCandidates.find((route) => {
         const routeLocalFile = context.files.find((candidate) => candidate.relativePath.startsWith(route));
         if (routeLocalFile && serverAuthCheck.test(routeLocalFile.text)) return false;
@@ -529,6 +542,7 @@ export const rules: Rule[] = [
     (file) => {
       if (!/(login|signin|sign-in|callback)/i.test(file.relativePath + file.text)) return [];
       if (!isServerRoute(file)) return [];
+      if (/\bjwt\.sign\s*\(|createAccessToken|createRefreshToken/.test(file.text)) return [];
       if (/supabase\.auth|signInWithOtp|exchangeCodeForSession|resetPasswordForEmail/i.test(file.text)) return [];
       if (!/(session|cookie).*(set|create)|res\.cookie|cookies\(\)\.set/i.test(file.text)) return [];
       if (/\b(regenerate|rotate|renew|destroy|invalidate|newSession)\b/i.test(file.text)) return [];
@@ -679,6 +693,19 @@ function isServerRoute(file: SourceFile): boolean {
 
 function isHandlerLike(file: SourceFile): boolean {
   return /\b(GET|POST|PUT|PATCH|DELETE)\s*\(|\b(req|request|res|response)\b|NextRequest|Request\b|Response\b|\b(app|router)\.(get|post|put|patch|delete)\s*\(/.test(file.text);
+}
+
+function isAuthFlowPath(file: SourceFile): boolean {
+  return /(^|\/)(login|logout|signin|sign-in|signup|sign-up|register|verifyemail|verify-email|reset_password|reset-password|forgot_password|forgot-password|callback)(\/|\.|-|$)/i.test(file.relativePath);
+}
+
+function nearbyFilesContain(file: SourceFile, context: RuleContext, pattern: RegExp): boolean {
+  const dir = file.relativePath.split("/").slice(0, -1).join("/");
+  return context.files.some((candidate) => {
+    if (!candidate.relativePath.startsWith(dir)) return false;
+    pattern.lastIndex = 0;
+    return pattern.test(candidate.text);
+  });
 }
 
 function isProtectedRouteCandidate(file: SourceFile, context: RuleContext): boolean {

@@ -1,5 +1,9 @@
 # Auth Doctor Build Goal
 
+## Status
+
+Completed for the current MVP PRD scope on 2026-05-16. Evidence is recorded in [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md).
+
 ## Goal
 
 Complete Auth Doctor from the product requirements draft into a usable private-alpha developer tool.
