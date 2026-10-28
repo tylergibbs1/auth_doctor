@@ -6,7 +6,23 @@ Auth Doctor is a framework-aware authentication and authorization scanner for Ty
 
 This is an MVP scanner. It is useful today, but it is not a replacement for penetration testing, threat modeling, or a security review.
 
-## What It Scans
+## Quick start
+
+From this repo:
+
+```bash
+npm install
+npm run build
+npm run auth-doctor -- packages/test-fixtures/express-jwt-vulnerable
+```
+
+Auth Doctor is not on npm yet. The intended public command is `npx -y auth-doctor@latest .`, but the `auth-doctor` name on npm currently belongs to an unrelated package, so don't run that command expecting this scanner.
+
+## How it works
+
+The CLI detects the project's framework and auth provider, runs the matching rules over the source (and Supabase SQL migrations), then scores the results and writes them in the format you ask for. Diff and staged modes limit the scan to changed files.
+
+## What it scans
 
 MVP coverage includes:
 
@@ -28,70 +44,7 @@ Auth Doctor emits:
 - GitHub Actions annotations
 - Project-specific agent rules for Claude, Cursor, Codex, and OpenCode
 
-## Quick Start
-
-From this repo:
-
-```bash
-npm install
-npm run build
-npm run auth-doctor -- packages/test-fixtures/express-jwt-vulnerable
-```
-
-Once published to npm, the intended public command is:
-
-```bash
-npx -y auth-doctor@latest .
-```
-
-## CLI
-
-```bash
-auth-doctor [directory] [options]
-```
-
-Useful options:
-
-```bash
---score
---json
---sarif
---annotations
---staged
---diff [base]
---fail-on <critical|error|warning|none>
---explain <file:line>
---config <path>
---output <path>
-```
-
-Examples:
-
-```bash
-npm run auth-doctor -- . --score
-npm run auth-doctor -- . --json --fail-on none --output auth-doctor.report.json
-npm run auth-doctor -- . --sarif --output auth-doctor.sarif
-npm run auth-doctor -- . --explain src/middleware.ts:25
-```
-
-## Agent Rules
-
-Install project-specific auth guidance for coding agents:
-
-```bash
-npm run auth-doctor -- . install
-```
-
-This writes guidance for common agent conventions:
-
-- `CLAUDE.md`
-- `.cursor/rules/auth-doctor.mdc`
-- `AGENTS.md`
-- `.opencode/auth-doctor.md`
-
-The generated rules tell agents to use server-side auth, avoid trusting client roles or IDs, verify resource ownership, keep service keys server-only, and run Auth Doctor before finishing auth-related work.
-
-## Example Findings
+## Example findings
 
 JWT decoded without verification:
 
@@ -122,11 +75,67 @@ app.use(requireAuth);
 
 See [docs/RULES.md](docs/RULES.md) for rule documentation and unsafe/safe examples.
 
+## CLI
+
+```bash
+auth-doctor [directory] [options]
+auth-doctor [directory] install
+```
+
+Examples:
+
+```bash
+npm run auth-doctor -- . --score
+npm run auth-doctor -- . --json --fail-on none --output auth-doctor.report.json
+npm run auth-doctor -- . --sarif --output auth-doctor.sarif
+npm run auth-doctor -- . --explain src/middleware.ts:25
+```
+
+All options:
+
+```text
+--version
+--verbose
+--score
+--json
+--sarif
+--project <name>
+--diff [base]
+--staged
+--full
+--offline
+--fail-on <critical|error|warning|none>
+--annotations
+--explain <file:line>
+--why <file:line>
+--no-secrets
+--no-agent-hints
+--config <path>
+--output, -o <path>
+```
+
+## Agent rules
+
+Install project-specific auth guidance for coding agents:
+
+```bash
+npm run auth-doctor -- . install
+```
+
+This writes guidance for common agent conventions:
+
+- `CLAUDE.md`
+- `.cursor/rules/auth-doctor.mdc`
+- `AGENTS.md`
+- `.opencode/auth-doctor.md`
+
+The generated rules tell agents to use server-side auth, avoid trusting client roles or IDs, verify resource ownership, keep service keys server-only, and run Auth Doctor before finishing auth-related work.
+
 ## GitHub Actions
 
-The repo includes a composite action scaffold in `packages/integration-github-action`.
+A composite action scaffold lives in [`packages/integration-github-action`](packages/integration-github-action). It runs `npx -y auth-doctor@latest`, so it only works once the CLI is published under that name.
 
-Example workflow:
+Intended workflow once the action and CLI are published:
 
 ```yaml
 name: Auth Doctor
@@ -156,7 +165,7 @@ jobs:
           sarif: true
 ```
 
-## Validation Status
+## Validation status
 
 The MVP PRD validation gate has been completed for the current scope.
 
@@ -197,7 +206,7 @@ npm run auth-doctor -- packages/test-fixtures/supabase-vulnerable --json --fail-
 npm run auth-doctor -- packages/test-fixtures/healthy-next
 ```
 
-## Package Layout
+### Package layout
 
 ```text
 packages/
@@ -224,4 +233,3 @@ Auth Doctor is intentionally conservative, but it is still a static heuristic sc
 - Add more provider-specific rules.
 - Add PR comment integration tests.
 - Expand the real-world validation set over time.
-
